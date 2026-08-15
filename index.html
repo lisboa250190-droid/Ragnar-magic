@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Ragnar Magic v0.2</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#08100b;font-family:system-ui;color:#fff;touch-action:none}
+#game{position:fixed;inset:0;width:100%;height:100%;background:#16351c}
+#hud{position:fixed;top:10px;left:10px;right:10px;z-index:5;pointer-events:none}
+.panel{background:#111b18cc;border:1px solid #ffffff22;border-radius:14px;padding:9px 12px;backdrop-filter:blur(5px);max-width:420px}
+.bar{height:9px;background:#333;border-radius:9px;overflow:hidden;margin:4px 0}.hp{background:#d95353;height:100%}.xp{background:#4f88dc;height:100%}
+#message{position:fixed;left:50%;top:23%;transform:translateX(-50%);z-index:7;text-align:center;pointer-events:none;font-weight:700;text-shadow:0 2px 5px #000}
+#joystick{position:fixed;left:18px;bottom:22px;width:130px;height:130px;border-radius:50%;background:#ffffff18;border:2px solid #ffffff30;z-index:6}
+#stick{position:absolute;width:58px;height:58px;border-radius:50%;background:#ffffff42;left:36px;top:36px}
+.controls{position:fixed;right:18px;bottom:25px;z-index:6;display:flex;gap:12px;align-items:end}
+button{border:1px solid #ffffff33;background:#182238dd;color:#fff;border-radius:50%;width:72px;height:72px;font-weight:700}
+#attack{width:88px;height:88px;background:#513333dd}
+#skills{position:fixed;right:18px;bottom:115px;z-index:6;display:flex;gap:8px}
+.skill{width:62px;height:62px;font-size:12px}
+.hidden{display:none!important}
+#choice{position:fixed;inset:0;background:#000b;z-index:10;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{max-width:600px;width:100%;background:#151c25;border:1px solid #ffffff22;border-radius:20px;padding:20px}
+.choicegrid{display:grid;grid-template-columns:1fr;gap:10px}.choicegrid button{width:100%;height:auto;border-radius:14px;padding:15px;text-align:left}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud"><div class="panel">
+<b>⚔️ <span id="name">Levi</span></b> · Nv <span id="level">1</span> · 💰 <span id="gold">0</span>
+<div>HP <span id="hpText"></span></div><div class="bar"><div id="hpbar" class="hp"></div></div>
+<div>XP <span id="xpText"></span></div><div class="bar"><div id="xpbar" class="xp"></div></div>
+<div id="skillText">Habilidade: nenhuma</div></div></div>
+<div id="message"></div>
+<div id="joystick"><div id="stick"></div></div>
+<div id="skills"><button class="skill" id="skill1">✨<br>—</button></div>
+<div class="controls"><button id="dodge">💨</button><button id="attack">⚔️</button></div>
+
+<div id="choice" class="hidden"><div class="card">
+<h2>🧬 Essência do Lobo</h2>
+<p>O Lobo Cinzento foi derrotado. Escolha uma habilidade.</p>
+<div class="choicegrid">
+<button onclick="choose('Olfato Aguçado')"><b>👃 Olfato Aguçado</b><br>+3 Percepção e detecta criaturas/rastros com mais facilidade.</button>
+<button onclick="choose('Agilidade Lupina')"><b>🦵 Agilidade Lupina</b><br>+3 Velocidade e melhora a esquiva.</button>
+<button onclick="choose('Visão Noturna')"><b>🌙 Visão Noturna</b><br>+2 Percepção e visão melhor em áreas escuras.</button>
+</div></div></div>
+
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d');
+let W,H,dpr, last=performance.now();
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*dpr;c.height=H*dpr;c.style.width=W+'px';c.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',resize);resize();
+
+const world={w:2600,h:1800};
+const p={x:500,y:900,r:18,speed:210,hp:100,maxHp:100,level:1,xp:0,next:100,gold:0,stats:{forca:5,velocidade:5,resistencia:5,inteligencia:5,percepcao:5},skill:null,attackCd:0,dodgeCd:0,invuln:0};
+const wolf={x:900,y:900,r:23,hp:45,maxHp:45,alive:true,aggro:false,attackCd:0,respawn:0};
+const loot=[];
+let cam={x:0,y:0}, joy={active:false,x:0,y:0}, flash=0;
+
+function msg(t){document.getElementById('message').textContent=t;clearTimeout(msg.t);msg.t=setTimeout(()=>document.getElementById('message').textContent='',1800)}
+function xp(n){p.xp+=n;while(p.xp>=p.next){p.xp-=p.next;p.level++;p.next=Math.floor(p.next*1.35);p.maxHp+=12;p.hp=p.maxHp;p.stats.forca++;p.stats.resistencia++;msg('⭐ Nível '+p.level+'!')}}
+function updateHUD(){
+name.textContent=p.name||'Levi';level.textContent=p.level;gold.textContent=p.gold;
+hpText.textContent=Math.max(0,Math.ceil(p.hp))+' / '+p.maxHp;hpbar.style.width=Math.max(0,p.hp/p.maxHp*100)+'%';
+xpText.textContent=p.xp+' / '+p.next;xpbar.style.width=p.xp/p.next*100+'%';
+skillText.textContent='Habilidade: '+(p.skill||'nenhuma');
+}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function attack(){
+if(p.attackCd>0||!wolf.alive)return;
+p.attackCd=.42;let d=dist(p,wolf);
+if(d<75){let damage=9+Math.floor(p.stats.forca/2);wolf.hp-=damage;flash=.08;msg('⚔️ '+damage+' de dano');if(wolf.hp<=0)killWolf()}
+else msg('Aproxime-se do lobo.');
+}
+function dodge(){
+if(p.dodgeCd>0)return;p.dodgeCd=1.0;p.invuln=.35;
+let dx=joy.x,dy=joy.y;if(Math.hypot(dx,dy)<.1){dx=1;dy=0}
+p.x=clamp(p.x+dx*110,30,world.w-30);p.y=clamp(p.y+dy*110,30,world.h-30);msg('💨 Esquiva!')
+}
+function killWolf(){
+wolf.alive=false;wolf.respawn=999999;
+loot.push({x:wolf.x-20,y:wolf.y+20,type:'Presa de Lobo',n:2});
+loot.push({x:wolf.x+20,y:wolf.y+20,type:'Pele de Lobo',n:1});
+loot.push({x:wolf.x,y:wolf.y-25,type:'Carne de Lobo',n:2});
+xp(50);msg('🏆 Lobo derrotado! +50 XP');
+setTimeout(()=>choice.classList.remove('hidden'),650);
+}
+function choose(s){
+p.skill=s;if(s==='Olfato Aguçado')p.stats.percepcao+=3;
+if(s==='Agilidade Lupina'){p.stats.velocidade+=3;p.speed+=35}
+if(s==='Visão Noturna')p.stats.percepcao+=2;
+choice.classList.add('hidden');msg('🧬 '+s+' adquirida!');updateHUD();
+}
+
+function collect(){
+for(let i=loot.length-1;i>=0;i--)if(dist(p,loot[i])<48){let l=loot[i];p[l.type]=(p[l.type]||0)+l.n;p.gold+=0;loot.splice(i,1);msg(l.type+' ×'+l.n+' coletado');}
+}
+
+function enemyAI(dt){
+if(!wolf.alive)return;
+wolf.attackCd-=dt;
+let d=dist(p,wolf);
+if(d<420)wolf.aggro=true;
+if(wolf.aggro){
+ if(d>55){wolf.x+=(p.x-wolf.x)/d*75*dt;wolf.y+=(p.y-wolf.y)/d*75*dt}
+ else if(wolf.attackCd<=0&&p.invuln<=0){wolf.attackCd=1.1;let dmg=6;p.hp-=dmg;msg('🐺 O lobo causou '+dmg+' de dano');if(p.hp<=0){p.hp=p.maxHp;p.x=500;p.y=900;wolf.x=900;wolf.y=900;wolf.aggro=false;msg('💀 Você foi derrotado e voltou ao início.')}}
+}
+}
+function update(dt){
+p.attackCd=Math.max(0,p.attackCd-dt);p.dodgeCd=Math.max(0,p.dodgeCd-dt);p.invuln=Math.max(0,p.invuln-dt);
+let m=Math.hypot(joy.x,joy.y);if(m>.05){p.x=clamp(p.x+joy.x*p.speed*dt,25,world.w-25);p.y=clamp(p.y+joy.y*p.speed*dt,25,world.h-25)}
+enemyAI(dt);collect();
+cam.x=clamp(p.x-W/2,0,world.w-W);cam.y=clamp(p.y-H/2,0,world.h-H);updateHUD();
+}
+function draw(){
+ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-cam.x,-cam.y);
+ctx.fillStyle='#1d4b27';ctx.fillRect(0,0,world.w,world.h);
+for(let x=0;x<world.w;x+=80)for(let y=0;y<world.h;y+=80){
+ctx.fillStyle=((x+y)/80%3===0)?'#20552b':'#1f4f29';ctx.fillRect(x,y,78,78);
+if((x*13+y*7)%17<3){ctx.fillStyle='#102d18';ctx.beginPath();ctx.arc(x+35,y+30,18,0,7);ctx.fill();ctx.fillStyle='#17401f';ctx.fillRect(x+31,y+28,8,35)}
+}
+ctx.fillStyle='#9b7b55';ctx.fillRect(0,845,world.w,110);ctx.fillStyle='#b18d63';ctx.fillRect(0,878,world.w,45);
+ctx.fillStyle='#263b63';ctx.fillRect(2100,100,380,280);
+ctx.fillStyle='#5d4a38';ctx.fillRect(1600,550,150,120);ctx.fillStyle='#8e6748';ctx.fillRect(1635,510,80,60);
+ctx.fillStyle='#ffffff';ctx.font='22px system-ui';ctx.fillText('Auren',1605,690);
+for(const l of loot){ctx.fillStyle='#e4c15a';ctx.beginPath();ctx.arc(l.x,l.y,8,0,7);ctx.fill()}
+if(wolf.alive){ctx.fillStyle='#70777f';ctx.beginPath();ctx.arc(wolf.x,wolf.y,wolf.r,0,7);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(wolf.x+9,wolf.y-7,3,0,7);ctx.fill();ctx.beginPath();ctx.arc(wolf.x+9,wolf.y+7,3,0,7);ctx.fill();ctx.fillStyle='#b33';ctx.fillRect(wolf.x-25,wolf.y-39,50,6);ctx.fillStyle='#55b35c';ctx.fillRect(wolf.x-25,wolf.y-39,50*Math.max(0,wolf.hp/wolf.maxHp),6)}
+ctx.fillStyle=p.invuln>0?'#9fe5ff':'#d8b18a';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();ctx.fillStyle='#3b5d9a';ctx.fillRect(p.x-12,p.y+5,24,25);
+ctx.restore();
+}
+function loop(t){let dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+
+function joyStart(e){joy.active=true;joyMove(e)}
+function joyMove(e){if(!joy.active)return;let r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=46;if(len>max){dx=dx/len*max;dy=dy/len*max}joy.x=dx/max;joy.y=dy/max;stick.style.left=(36+dx)+'px';stick.style.top=(36+dy)+'px'}
+function joyEnd(){joy.active=false;joy.x=0;joy.y=0;stick.style.left='36px';stick.style.top='36px'}
+joystick.addEventListener('pointerdown',e=>{joystick.setPointerCapture(e.pointerId);joyStart(e)});
+joystick.addEventListener('pointermove',joyMove);joystick.addEventListener('pointerup',joyEnd);joystick.addEventListener('pointercancel',joyEnd);
+attack.onclick=attack;dodge.onclick=dodge;
+addEventListener('keydown',e=>{if(e.key===' '||e.key==='j')attack();if(e.key==='Shift')dodge();joy.x=(e.key==='d'?1:e.key==='a'?-1:joy.x);joy.y=(e.key==='s'?1:e.key==='w'?-1:joy.y)});
+p.name='Levi';msg('🌲 Explore Elarin e encontre o Lobo Cinzento.');
+updateHUD();
+</script>
+</body></html>
