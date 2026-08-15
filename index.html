@@ -1,10 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Ragnar Magic - Teste 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Ragnar Magic</title>
 
 <style>
 html,body{
@@ -12,8 +11,9 @@ html,body{
     width:100%;
     height:100%;
     overflow:hidden;
-    background:#07100b;
+    background:#000;
     font-family:Arial,sans-serif;
+    touch-action:none;
 }
 
 #game{
@@ -23,323 +23,729 @@ html,body{
     height:100%;
 }
 
-#status{
+#hud{
     position:fixed;
-    top:20px;
-    left:20px;
-    right:20px;
+    top:12px;
+    left:12px;
+    right:12px;
     z-index:10;
-    padding:15px;
-    border-radius:12px;
-    background:#101820dd;
+    pointer-events:none;
+}
+
+.panel{
+    width:min(390px,calc(100vw - 24px));
+    box-sizing:border-box;
+    padding:12px 14px;
+    border-radius:16px;
+    background:#101923dd;
+    border:1px solid #ffffff25;
     color:white;
-    font-size:16px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 5px 20px #0008;
+}
+
+.bar{
+    height:10px;
+    background:#222;
+    border-radius:10px;
+    overflow:hidden;
+    margin:4px 0 7px;
+}
+
+#hpbar{
+    height:100%;
+    width:100%;
+    background:#d83d4a;
+}
+
+#xpbar{
+    height:100%;
+    width:0%;
+    background:#4e91e6;
+}
+
+#enemy{
+    display:none;
+}
+
+#enemybar{
+    height:100%;
+    width:100%;
+    background:#63b65d;
+}
+
+#message{
+    position:fixed;
+    top:22%;
+    left:50%;
+    transform:translateX(-50%);
+    color:white;
+    z-index:20;
+    font-weight:bold;
+    font-size:19px;
+    text-align:center;
+    text-shadow:0 3px 8px #000;
+    pointer-events:none;
+}
+
+#joystick{
+    position:fixed;
+    left:18px;
+    bottom:20px;
+    width:138px;
+    height:138px;
+    border-radius:50%;
+    background:#ffffff18;
+    border:2px solid #ffffff30;
+    z-index:20;
+}
+
+#stick{
+    position:absolute;
+    left:39px;
+    top:39px;
+    width:60px;
+    height:60px;
+    border-radius:50%;
+    background:#ffffff45;
+}
+
+.controls{
+    position:fixed;
+    right:16px;
+    bottom:20px;
+    display:flex;
+    align-items:end;
+    gap:9px;
+    z-index:20;
+}
+
+button{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    border:1px solid #ffffff35;
+    background:#182238e8;
+    color:white;
+    font-weight:bold;
+    box-shadow:0 5px 15px #0009;
+}
+
+#attack{
+    width:92px;
+    height:92px;
+    background:#633737ef;
+    font-size:26px;
+}
+
+#magic{
+    background:#4d3975ef;
+}
+
+#run{
+    background:#31543eef;
+}
+
+#dodge{
+    background:#31536aef;
+}
+
+#start{
+    position:fixed;
+    inset:0;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(#06120ddd,#000e);
+}
+
+.startCard{
+    width:min(420px,88vw);
+    padding:30px;
+    border-radius:24px;
+    text-align:center;
+    color:white;
+    background:#101923f5;
+    border:1px solid #ffffff25;
+    box-shadow:0 15px 50px #000;
+}
+
+.startCard h1{
+    font-size:40px;
+    margin:0;
+}
+
+.startCard p{
+    color:#ccd4dc;
+}
+
+#startButton{
+    width:100%;
+    height:60px;
+    border-radius:16px;
+    margin-top:15px;
+    background:#315f94;
+    font-size:17px;
+}
+
+.hidden{
+    display:none!important;
 }
 </style>
 </head>
 
 <body>
 
-<div id="status">
-    🔄 Iniciando motor 3D...
+<canvas id="game"></canvas>
+
+<div id="hud">
+    <div class="panel">
+
+        <b>⚔️ Levi</b>
+        · Nv <span id="level">1</span>
+        · 💰 <span id="gold">0</span>
+
+        <div>❤️ HP <span id="hpText">100 / 100</span></div>
+        <div class="bar">
+            <div id="hpbar"></div>
+        </div>
+
+        <div>⭐ XP <span id="xpText">0 / 100</span></div>
+        <div class="bar">
+            <div id="xpbar"></div>
+        </div>
+
+        <div id="enemy">
+            🐺 Lobo Cinzento · HP
+            <span id="enemyText">60 / 60</span>
+
+            <div class="bar">
+                <div id="enemybar"></div>
+            </div>
+        </div>
+
+        <div>✨ <span id="skillText">Nenhuma habilidade</span></div>
+
+    </div>
 </div>
 
-<canvas id="game"></canvas>
+<div id="message"></div>
+
+<div id="joystick">
+    <div id="stick"></div>
+</div>
+
+<div class="controls">
+    <button id="dodge">💨<br>Esquiva</button>
+    <button id="run">🏃<br>Correr</button>
+    <button id="magic">✨<br>Magia</button>
+    <button id="attack">⚔️</button>
+</div>
+
+<div id="start">
+    <div class="startCard">
+        <h1>Ragnar Magic</h1>
+        <p>⚔️ As Crônicas de Elarin</p>
+        <p>🌲 Explore o mundo e enfrente o Lobo Cinzento.</p>
+
+        <button id="startButton">
+            ENTRAR NO MUNDO
+        </button>
+    </div>
+</div>
 
 <script type="module">
 
-import * as THREE from
-"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-
-import {GLTFLoader} from
-"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
-
-
-const status =
-document.getElementById("status");
-
-const canvas =
-document.getElementById("game");
+import {
+    startGraphics,
+    updateGraphics,
+    playerPosition,
+    getWolfDistance,
+    attackGraphics,
+    magicGraphics,
+    dodgeGraphics
+} from "./graphics.js";
 
 
-/* =========================
-CENA
-========================= */
+const state={
+    started:false,
 
-const scene =
-new THREE.Scene();
+    hp:100,
+    maxHp:100,
 
-scene.background =
-new THREE.Color(0x80b4d0);
+    xp:0,
+    nextXP:100,
 
+    level:1,
+    gold:0,
 
-/* =========================
-CAMERA
-========================= */
+    wolfHp:60,
+    wolfMaxHp:60,
 
-const camera =
-new THREE.PerspectiveCamera(
-50,
-innerWidth/innerHeight,
-0.1,
-1000
-);
+    attackCooldown:0,
+    magicCooldown:0,
+    dodgeCooldown:0,
 
-camera.position.set(
-0,
-2,
-8
-);
+    running:false,
+
+    skill:null
+};
 
 
-/* =========================
-RENDERER
-========================= */
+const joy={
+    x:0,
+    y:0,
+    active:false
+};
 
-const renderer =
-new THREE.WebGLRenderer({
-canvas:canvas,
-antialias:true
-});
 
-renderer.setSize(
-innerWidth,
-innerHeight
-);
-
-renderer.setPixelRatio(
-Math.min(devicePixelRatio,2)
-);
-
-renderer.shadowMap.enabled=true;
+const joystick=document.getElementById("joystick");
+const stick=document.getElementById("stick");
 
 
 /* =========================
-LUZ
+   MENSAGEM
 ========================= */
 
-const light =
-new THREE.DirectionalLight(
-0xffffff,
-4
-);
+let messageTimer;
 
-light.position.set(
-5,
-10,
-5
-);
+function message(text){
 
-scene.add(light);
+    const el=document.getElementById("message");
 
+    el.textContent=text;
 
-const ambient =
-new THREE.AmbientLight(
-0xffffff,
-2
-);
+    clearTimeout(messageTimer);
 
-scene.add(ambient);
-
-
-/* =========================
-CHÃO
-========================= */
-
-const floor =
-new THREE.Mesh(
-
-new THREE.PlaneGeometry(
-100,
-100
-),
-
-new THREE.MeshStandardMaterial({
-color:0x39733d
-})
-
-);
-
-floor.rotation.x =
--Math.PI/2;
-
-scene.add(floor);
-
-
-/* =========================
-CARREGAR MODELO
-========================= */
-
-status.textContent =
-"🔄 Procurando blackclothed.glb...";
-
-
-const loader =
-new GLTFLoader();
-
-
-loader.load(
-
-"./models/blackclothed.glb",
-
-function(gltf){
-
-    console.log(gltf);
-
-    const model =
-    gltf.scene;
-
-    model.position.set(
-    0,
-    0,
-    0
-    );
-
-
-    /*
-    Descobrimos automaticamente
-    o tamanho do modelo.
-    */
-
-    const box =
-    new THREE.Box3()
-    .setFromObject(model);
-
-    const size =
-    box.getSize(
-    new THREE.Vector3()
-    );
-
-    const center =
-    box.getCenter(
-    new THREE.Vector3()
-    );
-
-
-    /*
-    Centralizar personagem.
-    */
-
-    model.position.x -=
-    center.x;
-
-    model.position.z -=
-    center.z;
-
-    model.position.y -=
-    box.min.y;
-
-
-    /*
-    Ajustar tamanho.
-    */
-
-    const maxSize =
-    Math.max(
-    size.x,
-    size.y,
-    size.z
-    );
-
-    const scale =
-    3 / maxSize;
-
-    model.scale.setScalar(
-    scale
-    );
-
-
-    model.traverse(
-    function(object){
-
-        if(object.isMesh){
-
-            object.castShadow=true;
-            object.receiveShadow=true;
-
-        }
-
-    });
-
-
-    scene.add(model);
-
-
-    status.innerHTML =
-    "✅ PERSONAGEM 3D CARREGADO!<br><br>" +
-    "Agora você está vendo o modelo real.";
-
-},
-
-function(progress){
-
-    if(progress.total){
-
-        const percent =
-        Math.round(
-        progress.loaded /
-        progress.total *
-        100
-        );
-
-        status.textContent =
-        "🔄 Carregando personagem: "+
-        percent+"%";
-
-    }
-
-},
-
-function(error){
-
-    console.error(error);
-
-    status.innerHTML =
-    "❌ ERRO AO CARREGAR O MODELO.<br><br>" +
-    "O arquivo foi encontrado, mas o navegador não conseguiu interpretá-lo.<br><br>" +
-    "Abra o console do navegador para ver o erro.";
-
-});
-
-
-/* =========================
-LOOP
-========================= */
-
-function animate(){
-
-    requestAnimationFrame(
-    animate
-    );
-
-    renderer.render(
-    scene,
-    camera
-    );
+    messageTimer=setTimeout(()=>{
+        el.textContent="";
+    },1600);
 }
 
-animate();
+
+/* =========================
+   XP
+========================= */
+
+function gainXP(amount){
+
+    state.xp+=amount;
+
+    while(state.xp>=state.nextXP){
+
+        state.xp-=state.nextXP;
+
+        state.level++;
+
+        state.nextXP=
+            Math.floor(state.nextXP*1.35);
+
+        state.maxHp+=15;
+        state.hp=state.maxHp;
+
+        message("⭐ Nível "+state.level+"!");
+    }
+}
 
 
 /* =========================
-RESIZE
+   HUD
 ========================= */
 
-addEventListener(
-"resize",
-function(){
+function updateHUD(){
 
-    camera.aspect =
-    innerWidth/innerHeight;
+    level.textContent=state.level;
 
-    camera.updateProjectionMatrix();
+    gold.textContent=state.gold;
 
-    renderer.setSize(
-    innerWidth,
-    innerHeight
+    hpText.textContent=
+        Math.ceil(state.hp)+
+        " / "+
+        state.maxHp;
+
+    hpbar.style.width=
+        Math.max(
+            0,
+            state.hp/state.maxHp*100
+        )+"%";
+
+    xpText.textContent=
+        state.xp+
+        " / "+
+        state.nextXP;
+
+    xpbar.style.width=
+        state.xp/state.nextXP*100+"%";
+
+    enemyText.textContent=
+        Math.ceil(state.wolfHp)+
+        " / "+
+        state.wolfMaxHp;
+
+    enemybar.style.width=
+        Math.max(
+            0,
+            state.wolfHp/state.wolfMaxHp*100
+        )+"%";
+
+    if(state.wolfHp<state.wolfMaxHp){
+
+        enemy.style.display="block";
+
+    }else{
+
+        enemy.style.display="none";
+    }
+
+    skillText.textContent=
+        state.skill || "Nenhuma habilidade";
+}
+
+
+/* =========================
+   JOYSTICK
+========================= */
+
+function moveJoystick(e){
+
+    if(!joy.active)return;
+
+    const r=
+        joystick.getBoundingClientRect();
+
+    const cx=r.left+r.width/2;
+    const cy=r.top+r.height/2;
+
+    let dx=e.clientX-cx;
+    let dy=e.clientY-cy;
+
+    const max=46;
+
+    const length=Math.hypot(dx,dy);
+
+    if(length>max){
+
+        dx=dx/length*max;
+        dy=dy/length*max;
+    }
+
+    joy.x=dx/max;
+    joy.y=dy/max;
+
+    stick.style.left=
+        (39+dx)+"px";
+
+    stick.style.top=
+        (39+dy)+"px";
+}
+
+
+function endJoystick(){
+
+    joy.active=false;
+
+    joy.x=0;
+    joy.y=0;
+
+    stick.style.left="39px";
+    stick.style.top="39px";
+}
+
+
+joystick.addEventListener(
+    "pointerdown",
+    e=>{
+
+        joy.active=true;
+
+        joystick.setPointerCapture(
+            e.pointerId
+        );
+
+        moveJoystick(e);
+    }
+);
+
+joystick.addEventListener(
+    "pointermove",
+    moveJoystick
+);
+
+joystick.addEventListener(
+    "pointerup",
+    endJoystick
+);
+
+joystick.addEventListener(
+    "pointercancel",
+    endJoystick
+);
+
+
+/* =========================
+   ATAQUE
+========================= */
+
+function attack(){
+
+    if(!state.started)return;
+
+    if(state.attackCooldown>0)return;
+
+    state.attackCooldown=.55;
+
+    const distance=getWolfDistance();
+
+    if(distance<5.2){
+
+        const damage=
+            12+
+            state.level*2;
+
+        state.wolfHp-=damage;
+
+        attackGraphics();
+
+        message(
+            "⚔️ Ataque! -"+
+            damage
+        );
+
+        if(state.wolfHp<=0){
+
+            state.wolfHp=0;
+
+            gainXP(60);
+
+            state.gold+=10;
+
+            message(
+                "🏆 Lobo derrotado! +60 XP"
+            );
+
+            setTimeout(()=>{
+
+                state.wolfHp=
+                    state.wolfMaxHp;
+
+            },3500);
+        }
+
+    }else{
+
+        attackGraphics();
+
+        message(
+            "🐺 Aproxime-se do lobo."
+        );
+    }
+}
+
+
+/* =========================
+   MAGIA
+========================= */
+
+function magic(){
+
+    if(!state.started)return;
+
+    if(state.magicCooldown>0)return;
+
+    state.magicCooldown=2;
+
+    const distance=getWolfDistance();
+
+    magicGraphics();
+
+    if(distance<13){
+
+        state.wolfHp-=20;
+
+        message(
+            "✨ Magia! -20 HP"
+        );
+
+        if(state.wolfHp<=0){
+
+            state.wolfHp=0;
+
+            gainXP(60);
+
+            state.gold+=10;
+
+            message(
+                "🔥 O lobo foi derrotado!"
+            );
+
+            setTimeout(()=>{
+
+                state.wolfHp=
+                    state.wolfMaxHp;
+
+            },3500);
+        }
+
+    }else{
+
+        message(
+            "✨ Magia lançada!"
+        );
+    }
+}
+
+
+/* =========================
+   ESQUIVA
+========================= */
+
+function dodge(){
+
+    if(!state.started)return;
+
+    if(state.dodgeCooldown>0)return;
+
+    state.dodgeCooldown=1;
+
+    dodgeGraphics(
+        joy.x,
+        joy.y
     );
 
-});
+    message("💨 Esquiva!");
+}
+
+
+/* =========================
+   BOTÕES
+========================= */
+
+attackButton=
+document.getElementById("attack");
+
+attackButton.addEventListener(
+    "pointerdown",
+    attack
+);
+
+document
+.getElementById("magic")
+.addEventListener(
+    "pointerdown",
+    magic
+);
+
+document
+.getElementById("dodge")
+.addEventListener(
+    "pointerdown",
+    dodge
+);
+
+
+const runButton=
+document.getElementById("run");
+
+runButton.addEventListener(
+    "pointerdown",
+    ()=>{
+        state.running=true;
+    }
+);
+
+runButton.addEventListener(
+    "pointerup",
+    ()=>{
+        state.running=false;
+    }
+);
+
+runButton.addEventListener(
+    "pointercancel",
+    ()=>{
+        state.running=false;
+    }
+);
+
+
+/* =========================
+   INICIAR
+========================= */
+
+document
+.getElementById("startButton")
+.addEventListener(
+    "click",
+    ()=>{
+
+        state.started=true;
+
+        document
+        .getElementById("start")
+        .classList.add("hidden");
+
+        message(
+            "🌲 Bem-vindo às terras de Elarin!"
+        );
+    }
+);
+
+
+/* =========================
+   LOOP DO JOGO
+========================= */
+
+let last=performance.now();
+
+function loop(now){
+
+    requestAnimationFrame(loop);
+
+    const dt=
+        Math.min(
+            .033,
+            (now-last)/1000
+        );
+
+    last=now;
+
+    state.attackCooldown=
+        Math.max(
+            0,
+            state.attackCooldown-dt
+        );
+
+    state.magicCooldown=
+        Math.max(
+            0,
+            state.magicCooldown-dt
+        );
+
+    state.dodgeCooldown=
+        Math.max(
+            0,
+            state.dodgeCooldown-dt
+        );
+
+
+    if(state.started){
+
+        updateGraphics(
+            dt,
+            joy.x,
+            joy.y,
+            state.running
+        );
+    }
+
+
+    updateHUD();
+}
+
+startGraphics();
+
+requestAnimationFrame(loop);
 
 </script>
 
